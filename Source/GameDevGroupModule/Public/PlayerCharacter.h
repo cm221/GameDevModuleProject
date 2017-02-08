@@ -6,6 +6,7 @@
 #include "PlayerCharacter.generated.h"
 
 class AProjectile;
+class AInteractionObject;
 
 UCLASS()
 class GAMEDEVGROUPMODULE_API APlayerCharacter : public ACharacter
@@ -51,7 +52,10 @@ public:
 	class USoundBase* FireSound;
 
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
-	FHitResult GetInteractionActorInReach();
+	AInteractionObject* GetInteractionObjectInReach();
+
+	UPROPERTY(BlueprintReadOnly)
+	bool ConfirmedInteractionObjectInReach = false;
 
 protected:
 	// Called to bind functionality to input

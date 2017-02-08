@@ -3,6 +3,7 @@
 #include "GameDevGroupModule.h"
 #include "PlayerCharacter.h"
 #include "Projectile.h"
+#include "InteractionObject.h"
 
 
 // Sets default values
@@ -170,7 +171,7 @@ void APlayerCharacter::Fire()
 }
 
 // Find the first physics type object in the players reach
-FHitResult APlayerCharacter::GetInteractionActorInReach()
+AInteractionObject* APlayerCharacter::GetInteractionObjectInReach()
 {
 	FHitResult HitResult;
 
@@ -178,14 +179,20 @@ FHitResult APlayerCharacter::GetInteractionActorInReach()
 	FCollisionQueryParams TraceParameters(FName(TEXT("")), false, GetOwner());
 
 	// Linetrace in the world & return first intercepted object
-	GetWorld()->LineTraceSingleByObjectType(
+	GetWorld()->LineTraceSingleByChannel(
 		HitResult,
 		GetReachStart(),
 		GetReachEnd(),
-		FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
+		ECollisionChannel::ECC_Visibility,
 		TraceParameters);
 
-	return HitResult;
+	AInteractionObject* InteractionObject = Cast<AInteractionObject>(HitResult.GetActor());
+	if (InteractionObject)
+		ConfirmedInteractionObjectInReach = true;
+	else
+		ConfirmedInteractionObjectInReach = false;
+
+	return InteractionObject;
 }
 
 // Start position of the player's grab reach

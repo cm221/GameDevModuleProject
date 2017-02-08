@@ -39,6 +39,10 @@ void UActionByObjectInTriggerVolume::TickComponent( float DeltaTime, ELevelTick 
 {
 	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
 
+	// Won't run code if there's no selected volume or object to be in volume
+	if (!ObjectCheckVolume || !ActorThatActivates) { return; }
+
+	// Checks if object is inside volume & broadcasts the answer
 	if (ObjectCheckVolume->IsOverlappingActor(ActorThatActivates))
 	{
 		ObjectFound.Broadcast();
