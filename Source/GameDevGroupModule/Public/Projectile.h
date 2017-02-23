@@ -32,6 +32,13 @@ public:
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Projectile)
+	float ProjectileDamage = 20.0f;
+
+protected:
+	// Blueprint function called when object is hit
+	UFUNCTION(BlueprintImplementableEvent, Category = "Score")
+	void ObjectHit();
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category = Projectile)

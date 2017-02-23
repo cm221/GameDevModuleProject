@@ -22,8 +22,15 @@ APlayerCharacter::APlayerCharacter()
 	// Create & attach a First Person Camera Component to the capsule
 	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("First Person Camera"));
 	FirstPersonCameraComponent->SetupAttachment(GetCapsuleComponent());
-	FirstPersonCameraComponent->RelativeLocation = FVector(-39.56f, 1.75f, 64.f); // Position the camera
+	FirstPersonCameraComponent->RelativeLocation = FVector(-30.0f, 1.75f, 64.f); // Position the camera
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
+
+	SwordArmMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Sword Arm Mesh"));
+	SwordArmMesh->SetupAttachment(FirstPersonCameraComponent);
+	SwordArmMesh->bCastCinematicShadow = false;
+	SwordArmMesh->CastShadow = false;
+
+
 
 	// Create crossbow static mesh & attach to capsule
 	CrossBowMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Cross Bow Mesh"));
