@@ -40,8 +40,11 @@ void AEnemyCharacter::SetupPlayerInputComponent(class UInputComponent* InputComp
 // Check if enemy is dead
 void AEnemyCharacter::IsDeadCheck()
 {
-	if (CurrentHealth < 0)
+	if (CurrentHealth <= 0)
+	{
 		isDead = true;
+		IsDeadTrueEvent();
+	}
 	else
 		isDead = false;
 }
@@ -50,19 +53,20 @@ void AEnemyCharacter::IsDeadCheck()
 float AEnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const & DamageEvent,
 class AController * EventInstigator, AActor * DamageCauser)
 {
-
+	// Convert damage amount to integer & clamp it between 0 & the current health value
 	int32 DamagePoints = FPlatformMath::RoundToInt(DamageAmount);
 	int32 DamageToApply = FMath::Clamp(DamagePoints, 0, CurrentHealth);
 
+	// Update current health value
 	CurrentHealth -= DamageToApply;
 
+	// Check if dead
 	IsDeadCheck();
 
-	UE_LOG(LogTemp, Warning, TEXT("Damage Done: %i"), DamageToApply);
-
+	// Check if damage done is by projectile damage type
 	if (Cast<UProjectileDamageType>(DamageEvent.DamageTypeClass->GetDefaultObject()))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Test worked"));
+		//UE_LOG(LogTemp, Warning, TEXT("Test worked"));
 	}
 
 	return DamageToApply;
