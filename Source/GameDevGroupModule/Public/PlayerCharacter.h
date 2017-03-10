@@ -60,12 +60,29 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	bool ConfirmedInteractionObjectInReach = false;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Attacking")
+	bool IsAttacking = false;
+
+	// Boolean variable that indicates if enemy is dead or alive
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Health")
+	float isDead = false;
+
+	// Health property
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Health")
+	int32 CurrentHealth;
+
 protected:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
 	// Fires a projectile
 	void Fire();
+
+	// Attacks with sword
+	void SwordAttack();
+
+	// Attacks with sword
+	void StopSwordAttack();
 
 	// Forward & back movement
 	void MoveForward(float Val);
@@ -94,14 +111,24 @@ protected:
 	// Initial speed of walking set by movement component, saved so that can set back to this post running
 	float InitialWalkSpeed;
 
+	// Start location of player reach
 	FVector GetReachStart() const;
 
+	// End location of player reach
 	FVector GetReachEnd() const;
+
+	// Checks if the player is dead 
+	virtual void IsDeadCheck();
+
+	// Causes player to take damage when hit
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const & DamageEvent,
+	class AController * EventInstigator, AActor * DamageCauser) override;
 
 private:
 	// Value for the reach of the player in cm
 	UPROPERTY(EditDefaultsOnly, Category = "Interaction")
 	float PlayerReach = 180.0;
 
-	
+	UPROPERTY(EditDefaultsOnly, Category = "Health")
+	int32 InitialHealth = 100;	
 };

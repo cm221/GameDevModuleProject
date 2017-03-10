@@ -54,7 +54,11 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Set walk speed
 	InitialWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+
+	// Initialising health value
+	CurrentHealth = InitialHealth;
 	
 }
 
@@ -91,6 +95,10 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* InputCom
 	InputComponent->BindAxis("LookUpRate", this, &APlayerCharacter::LookUpAtRate);
 
 	InputComponent->BindAction("Fire", IE_Pressed, this, &APlayerCharacter::Fire);
+
+	InputComponent->BindAction("SwordAttack", IE_Pressed, this, &APlayerCharacter::SwordAttack);
+	InputComponent->BindAction("SwordAttack", IE_Released, this, &APlayerCharacter::StopSwordAttack);
+
 
 }
 
@@ -165,8 +173,11 @@ void APlayerCharacter::Fire()
 		UWorld* const World = GetWorld();
 		if (World != NULL)
 		{
-			// spawn the projectile at the muzzle
-			World->SpawnActor<AProjectile>(ProjectileBlueprint, SpawnLocation, SpawnRotation);
+			// spawn the projectile at the socket location
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Owner = this;
+			SpawnParams.Instigator = Instigator;
+			World->SpawnActor<AProjectile>(ProjectileBlueprint, SpawnLocation, SpawnRotation, SpawnParams);
 		}
 	}
 
@@ -175,6 +186,18 @@ void APlayerCharacter::Fire()
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
 	}
+}
+
+// Start sword attack
+void APlayerCharacter::SwordAttack()
+{
+	IsAttacking = true;
+}
+
+// Stop sword attack
+void APlayerCharacter::StopSwordAttack()
+{
+	IsAttacking = false;
 }
 
 // Find the first physics type object in the players reach
@@ -233,4 +256,32 @@ FVector APlayerCharacter::GetReachEnd() const
 	FVector PlayerReachEnd = PlayerViewPointLocation + PlayerViewPointRotation.Vector() * PlayerReach;
 
 	return PlayerReachEnd;
+}
+
+// Called by the engine when damage is dealt
+float APlayerCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const & DamageEvent,
+class AController * EventInstigator, AActor * DamageCauser)
+{
+	// Convert damage amount to integer & clamp it between 0 & the current health value
+	int32 DamagePoints = FPlatformMath::RoundToInt(DamageAmount);
+	int32 DamageToApply = FMath::Clamp(DamagePoints, 0, CurrentHealth);
+
+	// Update current health value
+	CurrentHealth -= DamageToApply;
+
+	// Check if dead
+	IsDeadCheck();
+
+	return DamageToApply;
+}
+
+// Check if enemy is dead
+void APlayerCharacter::IsDeadCheck()
+{
+	if (CurrentHealth <= 0)
+	{
+		isDead = true;
+	}
+	else
+		isDead = false;
 }
