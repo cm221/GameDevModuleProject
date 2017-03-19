@@ -1,21 +1,21 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "GameDevGroupModule.h"
+#include "ArrowProjectile.h"
 #include "ProjectileDamageType.h"
-#include "Projectile.h"
 #include "StaticArrow.h"
 
 
 // Sets default values
-AProjectile::AProjectile()
+AArrowProjectile::AArrowProjectile()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Setup static mesh component as collision object & set as root component
 	CollisionMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Projectile Mesh"));
 	CollisionMesh->BodyInstance.SetCollisionProfileName("Projectile");
-	CollisionMesh->OnComponentHit.AddDynamic(this, &AProjectile::OnHit);
+	CollisionMesh->OnComponentHit.AddDynamic(this, &AArrowProjectile::OnHit);
 	RootComponent = CollisionMesh;
 
 	// Stops players being able to walk over projectile.
@@ -27,7 +27,7 @@ AProjectile::AProjectile()
 	ArrowMesh->SetupAttachment(RootComponent);
 	ArrowMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	ArrowMesh->SetCollisionObjectType(ECollisionChannel::ECC_WorldStatic);
-	
+
 	// Initialising projectile movement component with default values
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("Projectile Component"));
 	ProjectileMovement->InitialSpeed = 3000.f;
@@ -39,10 +39,10 @@ AProjectile::AProjectile()
 	InitialLifeSpan = ProjectileLifeSpan;
 }
 
-void AProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+void AArrowProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	// TODO: Remove if projectile can't bounce or if dont want object to move other objects
-	// Only add impulse and destroy projectile if we hit a physics
+	
+	// TODO  Decide if what impulse from arrow when hitting something
 	if ((OtherActor != NULL) && (OtherActor != this) && (OtherComp != NULL) && OtherComp->IsSimulatingPhysics())
 	{
 		//OtherComp->AddImpulseAtLocation(GetVelocity() * 100.0f, GetActorLocation());
@@ -62,78 +62,88 @@ void AProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimi
 			HitResult,
 			HitWorldLocation,
 			GetHitEndLocation(HitWorldLocation, HitWorldRotation),
-			FQuat(HitWorldRotation),
-			ECollisionChannel::ECC_WorldStatic,
-			FCollisionShape::MakeCapsule(10.0f, 10.0f),
+			FQuat(FRotator(0,0,0)),
+			ECollisionChannel::ECC_Visibility,
+			FCollisionShape::MakeCapsule(0.0f, 0.0f),
 			TraceParameters);
 
-			// Check that hit was confirmed and that a bone was hit
-			if (HitConfirmed && (HitResult.BoneName != "None"))
+		// Check that hit was confirmed and that a bone was hit
+		if (HitConfirmed && (HitResult.BoneName != "None"))
+		{
+			// Do damage to actor hit
+			UGameplayStatics::ApplyDamage(
+				HitResult.GetActor(),
+				ProjectileDamage,
+				GetWorld()->GetFirstPlayerController(),
+				this,
+				UProjectileDamageType::StaticClass());
+
+			// try and spawn static projectile
+			if (StaticProjectileBlueprint != NULL)
 			{
-				// Do damage to actor hit
-				UGameplayStatics::ApplyDamage(
-					HitResult.GetActor(),
-					ProjectileDamage,
-					GetWorld()->GetFirstPlayerController(),
-					this,
-					UProjectileDamageType::StaticClass());
 
-				// Stop projectile movement
-				ProjectileMovement->StopMovementImmediately();
+				// spawn the projectile at the impact location
+				FActorSpawnParameters SpawnParams;
+				SpawnParams.Owner = this;
+				SpawnParams.Instigator = Instigator;
+				auto StaticArrow = GetWorld()->SpawnActor<AStaticArrow>(StaticProjectileBlueprint, HitResult.ImpactPoint, HitWorldRotation, SpawnParams);
 
-				// try and spawn static projectile
-				if (StaticProjectileBlueprint != NULL)
-				{
+				// Attatch StaticArrow to bone hit on object
+				StaticArrow->AttachToComponent(HitResult.GetComponent(), FAttachmentTransformRules(EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true), HitResult.BoneName);
+				StaticArrow->CallOnSpawn(HitResult.ImpactPoint);
+			}
+			
 
-					// spawn the projectile at the socket location
-					FActorSpawnParameters SpawnParams;
-					SpawnParams.Owner = this;
-					SpawnParams.Instigator = Instigator;
-					auto StaticArrow = GetWorld()->SpawnActor<AStaticArrow>(StaticProjectileBlueprint, (HitResult.ImpactPoint + HitWorldRotation.Vector() * 20.f), HitWorldRotation, SpawnParams);
-
-					// Attatch StaticArrow to bone hit on object
-					StaticArrow->AttachToComponent(HitResult.GetComponent(), FAttachmentTransformRules::KeepWorldTransform, HitResult.BoneName);
-					StaticArrow->CallOnSpawn(HitResult.ImpactPoint);
-				}
-
+			Destroy();
+		}
+		else if (HitResult.Actor != NULL)
+		{
+			// Enemy has been hit but arrow cant attach so just delete the arrow to hide miss
+			if (HitResult.GetActor()->ActorHasTag("Enemy"))
+			{
 				Destroy();
 			}
-			else if (HitResult.GetActor()->ActorHasTag("Enemy"))
-			{
-				Destroy();
-			}
+
+			// If it wasn't an enemy that was hit the spawn a static arrow at the impact location of the trace
 			else
 			{
-				// spawn the projectile at the socket location
+				// Static arrow spawn parameters
 				FActorSpawnParameters SpawnParams;
 				SpawnParams.Owner = this;
 				SpawnParams.Instigator = Instigator;
 
+				// Spawn static arrow at the impact point of the trace
 				ProjectileMovement->StopMovementImmediately();
-				auto StaticArrow = GetWorld()->SpawnActor<AStaticArrow>(StaticProjectileBlueprint, HitWorldLocation, HitWorldRotation, SpawnParams);
+				auto StaticArrow = GetWorld()->SpawnActor<AStaticArrow>(StaticProjectileBlueprint, HitResult.ImpactPoint, HitWorldRotation, SpawnParams);
 				StaticArrow->PendingDestroy();
 				Destroy();
-			}
+			}	
+		}
+		// No actors were hit from the trace, so delete arrow
+		else
+		{
+			Destroy();
+		}
 	}
 
 }
 
 // Called when the game starts or when spawned
-void AProjectile::BeginPlay()
+void AArrowProjectile::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 }
 
 // Called every frame
-void AProjectile::Tick( float DeltaTime )
+void AArrowProjectile::Tick(float DeltaTime)
 {
-	Super::Tick( DeltaTime );
+	Super::Tick(DeltaTime);
 
 }
 
 // End location of linetrace from hit location
-FVector AProjectile::GetHitEndLocation(FVector HitWorldLocation, FRotator HitWorldRotation) const
+FVector AArrowProjectile::GetHitEndLocation(FVector HitWorldLocation, FRotator HitWorldRotation) const
 {
 	// Position of the end of the players reach using the PlayerReach varibale to determine reach length
 	FVector LineTraceReach = HitWorldLocation + HitWorldRotation.Vector() * HitReach;

@@ -3,24 +3,24 @@
 #pragma once
 
 #include "GameFramework/Actor.h"
-#include "Projectile.generated.h"
+#include "ArrowProjectile.generated.h"
 
 class AStaticArrow;
 
 UCLASS()
-class GAMEDEVGROUPMODULE_API AProjectile : public AActor
+class GAMEDEVGROUPMODULE_API AArrowProjectile : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
-	AProjectile();
+	AArrowProjectile();
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	
+
 	// Called every frame
-	virtual void Tick( float DeltaSeconds ) override;
+	virtual void Tick(float DeltaSeconds) override;
 
 	// Projectile movement component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
@@ -43,9 +43,9 @@ public:
 	TSubclassOf<AStaticArrow> StaticProjectileBlueprint;
 
 protected:
-	// Blueprint function called when object is hit
-	UFUNCTION(BlueprintImplementableEvent, Category = "Score")
-	void ObjectHit();
+	// Blueprint function used for debugging
+	UFUNCTION(BlueprintImplementableEvent, Category = "Debugging")
+	void ObjectHit(FHitResult HitResult);
 
 private:
 	// Lifespan of projectile in air before being destroyed
@@ -61,7 +61,7 @@ private:
 
 	// World location of where arrow hits object
 	FVector HitWorldLocation;
-	
+
 	// Rotation of arrow in world when hits object
 	FRotator HitWorldRotation;
 

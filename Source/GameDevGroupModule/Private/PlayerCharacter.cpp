@@ -2,8 +2,10 @@
 
 #include "GameDevGroupModule.h"
 #include "PlayerCharacter.h"
-#include "Projectile.h"
+#include "ArrowProjectile.h"
 #include "InteractionObject.h"
+#include "EnemyCharacter.h"
+#include "SwordDamageType.h"
 
 
 // Sets default values
@@ -27,8 +29,16 @@ APlayerCharacter::APlayerCharacter()
 
 	SwordArmMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Sword Arm Mesh"));
 	SwordArmMesh->SetupAttachment(FirstPersonCameraComponent);
+	SwordArmMesh->RelativeLocation = FVector(1.9f, 0.4f, -18.5f); // Position the crossbow
+	SwordArmMesh->RelativeRotation = FRotator(0.0f, 0.0f, -10.0f);
 	SwordArmMesh->bCastCinematicShadow = false;
 	SwordArmMesh->CastShadow = false;
+
+	SwordMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Sword Mesh"));
+	SwordMesh->AttachToComponent(SwordArmMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, false), TEXT("Sword"));
+	SwordMesh->bCastCinematicShadow = false;
+	SwordMesh->CastShadow = false;
+	SwordMesh->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::OnOverlapBegin);
 
 
 
@@ -177,7 +187,7 @@ void APlayerCharacter::Fire()
 			FActorSpawnParameters SpawnParams;
 			SpawnParams.Owner = this;
 			SpawnParams.Instigator = Instigator;
-			World->SpawnActor<AProjectile>(ProjectileBlueprint, SpawnLocation, SpawnRotation, SpawnParams);
+			World->SpawnActor<AArrowProjectile>(ProjectileBlueprint, SpawnLocation, SpawnRotation, SpawnParams);
 		}
 	}
 
@@ -275,7 +285,7 @@ class AController * EventInstigator, AActor * DamageCauser)
 	return DamageToApply;
 }
 
-// Check if enemy is dead
+// Check if player is dead
 void APlayerCharacter::IsDeadCheck()
 {
 	if (CurrentHealth <= 0)
@@ -284,4 +294,55 @@ void APlayerCharacter::IsDeadCheck()
 	}
 	else
 		isDead = false;
+}
+
+// Resturns inital health value set
+int32 APlayerCharacter::GetInitalHealth() const
+{
+	return InitialHealth;
+}
+
+// Called when sword overlaps with an object
+void APlayerCharacter::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	// Check that there is an overlapped actor & it isn't this actor & that it's an enemy
+	if (OtherActor && (OtherActor != this) && OtherComp && Cast<AEnemyCharacter>(OtherActor))
+	{
+		// Check that the attack anim is running and that damage has not alredy been done this anim
+		if (AttackAnimRunning == true && DamageDoneThisAttack == false)
+		{
+			// Damage the enemy
+			UGameplayStatics::ApplyDamage(
+				OtherActor,
+				SwordDamage,
+				GetController(),
+				this,
+				USwordDamageType::StaticClass());
+
+			// Set damage done this attack to true
+			DamageDoneThisAttack = true;
+
+			// Save the actor hit by the sword
+			ActorHitBySword = OtherActor;
+
+			// Delay before activating particle effects
+			FTimerHandle ParticleActivateTimer;
+			GetWorldTimerManager().SetTimer(ParticleActivateTimer, this, &APlayerCharacter::ActivateBloodParticles, TimeToSpawnBlood, false);
+		}
+	}
+	return;
+}
+
+// Call the event to activate blood particle effect
+void APlayerCharacter::ActivateBloodParticles()
+{
+	// Ensure that Actor hit is not null
+	if (ActorHitBySword != NULL)
+	{
+		// Set the spawn location of the blood particle effect
+		FVector BloodSpawnLocation = ActorHitBySword->GetActorLocation() + FVector(0.0f, 0.0f, 30.0f);
+
+		// Call event to spawn blood particle effect
+		SwordDamageConfirmed(BloodSpawnLocation);
+	}
 }

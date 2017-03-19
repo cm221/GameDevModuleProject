@@ -46,6 +46,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	class UAnimSequence* DeathAnimation;
 
+	// Damage enemy can do
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Damage")
+	float AttackDamage = 20.0f;
+
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Health")
 	int32 InitialHealth = 100;

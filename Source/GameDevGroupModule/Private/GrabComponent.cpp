@@ -72,43 +72,50 @@ void UGrabComponent::SetupInputComponent()
 
 	// Binding grab action to grab & release function
 	InputComponent->BindAction("Grab", IE_Pressed, this, &UGrabComponent::Grab);
-	InputComponent->BindAction("Grab", IE_Released, this, &UGrabComponent::Release);
+	//InputComponent->BindAction("Grab", IE_Released, this, &UGrabComponent::Release);
 }
 
 // Called when player presses grab button
 void UGrabComponent::Grab()
 {
-	// Line trace to find if physics object in player's reach
-	FHitResult HitResult = GetFirstPhysicsBodyInReach();
-	auto ComponentToGrab = HitResult.GetComponent();
-	auto ActorHit = HitResult.GetActor();
+	if (PhysicsHandle->GrabbedComponent)
+	{
+		Release();
+	}
+	else
+	{
+		// Line trace to find if physics object in player's reach
+		FHitResult HitResult = GetFirstPhysicsBodyInReach();
+		auto ComponentToGrab = HitResult.GetComponent();
+		auto ActorHit = HitResult.GetActor();
 
-	// Check if an actor was intercepted by line trace & has a physics handle component
-	if (!ActorHit) { return; }
-	if (!PhysicsHandle) { return; }
-	
-	// Finds orign of actor for location of where to grab
-	FVector ActorOrigin, ActorBounds;
-	ComponentToGrab->GetOwner()->GetActorBounds(true, ActorOrigin, ActorBounds);
+		// Check if an actor was intercepted by line trace & has a physics handle component
+		if (!ActorHit) { return; }
+		if (!PhysicsHandle) { return; }
 
-	// Place physics handle at the objects origin
-	PhysicsHandle->GrabComponent(
-		ComponentToGrab,
-		NAME_None,
-		ActorOrigin,
-		StopGrabbedObjectRotation); // Determines if grabbed object can be rotated
+		// Finds orign of actor for location of where to grab
+		FVector ActorOrigin, ActorBounds;
+		ComponentToGrab->GetOwner()->GetActorBounds(true, ActorOrigin, ActorBounds);
 
-	// Saving the players view rotation when the object was grabbed so to be able to rotate object with camera
-	FVector PlayerViewPointLocation;
-	PlayerViewPointRotationAtGrab;
-	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
-		PlayerViewPointLocation,
-		PlayerViewPointRotationAtGrab
-		);
+		// Place physics handle at the objects origin
+		PhysicsHandle->GrabComponent(
+			ComponentToGrab,
+			NAME_None,
+			ActorOrigin,
+			StopGrabbedObjectRotation); // Determines if grabbed object can be rotated
 
-	// Saving the objects when it was grabbed
-	FVector ObjectLocation;
-	PhysicsHandle->GetTargetLocationAndRotation(ObjectLocation, ObjectRotationAtGrab);
+										// Saving the players view rotation when the object was grabbed so to be able to rotate object with camera
+		FVector PlayerViewPointLocation;
+		PlayerViewPointRotationAtGrab;
+		GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
+			PlayerViewPointLocation,
+			PlayerViewPointRotationAtGrab
+			);
+
+		// Saving the objects when it was grabbed
+		FVector ObjectLocation;
+		PhysicsHandle->GetTargetLocationAndRotation(ObjectLocation, ObjectRotationAtGrab);
+	}
 }
 
 // Called when player releases grab button
